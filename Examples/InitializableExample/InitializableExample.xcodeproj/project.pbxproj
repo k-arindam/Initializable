@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		11FC42892FC292BB00CD9FD1 /* Initializable in Frameworks */ = {isa = PBXBuildFile; productRef = 11FC42882FC292BB00CD9FD1 /* Initializable */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		11FC426B2FC2926E00CD9FD1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				11FC42892FC292BB00CD9FD1 /* Initializable in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = InitializableExample;
 			packageProductDependencies = (
+				11FC42882FC292BB00CD9FD1 /* Initializable */,
 			);
 			productName = InitializableExample;
 			productReference = 11FC425D2FC2926C00CD9FD1 /* InitializableExample.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = 11FC42542FC2926C00CD9FD1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				11FC42872FC292BB00CD9FD1 /* XCLocalSwiftPackageReference "../../../Initializable" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 11FC425E2FC2926C00CD9FD1 /* Products */;
 			projectDirPath = "";
@@ -418,13 +427,14 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Debug;
@@ -462,13 +472,14 @@
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
+				TARGETED_DEVICE_FAMILY = "1,2";
 				XROS_DEPLOYMENT_TARGET = 26.5;
 			};
 			name = Release;
@@ -615,6 +626,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		11FC42872FC292BB00CD9FD1 /* XCLocalSwiftPackageReference "../../../Initializable" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../../Initializable;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		11FC42882FC292BB00CD9FD1 /* Initializable */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Initializable;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 11FC42552FC2926C00CD9FD1 /* Project object */;
 }

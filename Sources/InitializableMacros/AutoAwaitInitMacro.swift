@@ -32,8 +32,6 @@ public struct AutoAwaitInitMacro: MemberAttributeMacro {
         // @WaitForInit itself will emit proper diagnostics when applied manually
         // to wrong signatures, but here we only auto-apply when correct
         guard isAsync && isThrowing else {
-            // Emit a warning for async-only methods so the developer knows
-            // why they were skipped, rather than silently ignoring them
             if isAsync && !isThrowing {
                 context.diagnose(Diagnostic(
                     node: Syntax(funcDecl.funcKeyword),
