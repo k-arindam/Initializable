@@ -26,15 +26,66 @@ public struct WaitForInitMacro: BodyMacro {
         guard let enclosing = funcDecl.enclosingTypeDecl(in: context) else {
             context.diagnose(Diagnostic(
                 node: node,
-                message: WaitForInitDiagnostic.notInType
+                message: WaitForInitDiagnostic.notInType(throwing: false)
             ))
             return originalStatements
         }
         
-        guard funcDecl.conformsToInitializable(enclosing) else {
+        guard funcDecl.conformsToInitializable(enclosing, with: "Initializable") else {
             context.diagnose(Diagnostic(
                 node: node,
-                message: WaitForInitDiagnostic.notConforming
+                message: WaitForInitDiagnostic.notConforming(throwing: false)
+            ))
+            return originalStatements
+        }
+        
+        if !funcDecl.isAsync {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: WaitForInitDiagnostic.notAsync(throwing: false),
+                fixIts: [
+                    FixIt(
+                        message: WaitForInitFixIt.addAsync,
+                        changes: [
+                            .replace(
+                                oldNode: Syntax(funcDecl.signature),
+                                newNode: Syntax(funcDecl.addingAsync())
+                            )
+                        ]
+                    )
+                ]
+            ))
+            return originalStatements
+        }
+        
+        return ["await awaitInitialized()"] + body.statements
+    }
+}
+
+public struct WaitForThrowingInitMacro: BodyMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingBodyFor declaration: some DeclSyntaxProtocol & WithOptionalCodeBlockSyntax,
+        in context: some MacroExpansionContext
+    ) throws -> [CodeBlockItemSyntax] {
+        guard let funcDecl = declaration.as(FunctionDeclSyntax.self),
+              let body = funcDecl.body
+        else { return [] }
+        
+        let originalStatements = body.statements.map { $0 }
+        
+        guard let enclosing = funcDecl.enclosingTypeDecl(in: context) else {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: WaitForInitDiagnostic.notInType(throwing: true)
+            ))
+            return originalStatements
+        }
+        
+        guard funcDecl.conformsToInitializable(enclosing, with: "ThrowingInitializable") else {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: WaitForInitDiagnostic.notConforming(throwing: true)
             ))
             return originalStatements
         }
@@ -66,7 +117,7 @@ public struct WaitForInitMacro: BodyMacro {
             // throws but not async
             context.diagnose(Diagnostic(
                 node: node,
-                message: WaitForInitDiagnostic.notAsync,
+                message: WaitForInitDiagnostic.notAsync(throwing: true),
                 fixIts: [
                     FixIt(
                         message: WaitForInitFixIt.addAsync,

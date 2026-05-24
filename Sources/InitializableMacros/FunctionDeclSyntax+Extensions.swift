@@ -59,9 +59,9 @@ internal extension FunctionDeclSyntax {
     }
     
     /// Checks the inheritance clause of any type declaration for Initializable conformance
-    func conformsToInitializable(_ declaration: some DeclGroupSyntax) -> Bool {
+    func conformsToInitializable(_ declaration: some DeclGroupSyntax, with desc: String) -> Bool {
         declaration.inheritanceClause?.inheritedTypes.contains {
-            $0.type.trimmedDescription == "Initializable"
+            $0.type.trimmedDescription == desc
         } ?? false
     }
     

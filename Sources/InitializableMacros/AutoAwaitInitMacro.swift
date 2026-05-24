@@ -13,6 +13,38 @@ import SwiftSyntaxMacros
 // Stamps @WaitForInit onto every async method in the conforming actor
 public struct AutoAwaitInitMacro: MemberAttributeMacro {
     // Methods that are part of the protocol itself — must not be wrapped
+    static let excluded: Set<String> = ["markInitialized", "awaitInitialized"]
+    
+    public static func expansion(
+        of node: AttributeSyntax,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingAttributesFor member: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [AttributeSyntax] {
+        guard let funcDecl = member.as(FunctionDeclSyntax.self),
+              !excluded.contains(funcDecl.name.text)
+        else { return [] }
+        
+        guard funcDecl.conformsToInitializable(declaration, with: "Initializable") else {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: AutoAwaitInitDiagnostic.notConforming(throwing: false)
+            ))
+            return []
+        }
+        
+        if diagnoseDuplicateWaitForInit(
+            on: funcDecl,
+            throwing: false,
+            in: context
+        ), !funcDecl.isAsync { return [] }
+        
+        return ["@WaitForInit"]
+    }
+}
+
+public struct AutoAwaitThrowingInitMacro: MemberAttributeMacro {
+    // Methods that are part of the protocol itself — must not be wrapped
     static let excluded: Set<String> = ["markInitialized", "markFailed", "awaitInitialized"]
     
     public static func expansion(
@@ -25,13 +57,19 @@ public struct AutoAwaitInitMacro: MemberAttributeMacro {
               !excluded.contains(funcDecl.name.text)
         else { return [] }
         
-        guard funcDecl.conformsToInitializable(declaration) else {
+        guard funcDecl.conformsToInitializable(declaration, with: "ThrowingInitializable") else {
             context.diagnose(Diagnostic(
                 node: node,
-                message: AutoAwaitInitDiagnostic.notConforming
+                message: AutoAwaitInitDiagnostic.notConforming(throwing: true)
             ))
             return []
         }
+        
+        if diagnoseDuplicateWaitForInit(
+            on: funcDecl,
+            throwing: true,
+            in: context
+        ) { return [] }
         
         let isAsync = funcDecl.isAsync
         let isThrowing = funcDecl.isThrowing
@@ -60,6 +98,6 @@ public struct AutoAwaitInitMacro: MemberAttributeMacro {
             return []
         }
         
-        return ["@WaitForInit"]
+        return ["@WaitForThrowingInit"]
     }
 }

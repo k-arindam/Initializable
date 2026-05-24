@@ -13,6 +13,8 @@ import SwiftCompilerPlugin
 struct InitializableMacrosPlugin: CompilerPlugin {
     let providingMacros: [any Macro.Type] = [
         AutoAwaitInitMacro.self,
+        AutoAwaitThrowingInitMacro.self,
         WaitForInitMacro.self,
+        WaitForThrowingInitMacro.self,
     ]
 }

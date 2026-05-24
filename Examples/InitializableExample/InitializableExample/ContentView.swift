@@ -9,21 +9,48 @@ import SwiftUI
 import Initializable
 
 @AutoAwaitInit
-internal final class Manager: Initializable {
-    let initializationGate = InitializationGate()
+internal final class Manager1: Initializable {
+    let gate = InitializationGate()
+    
+    func method() async {}
+}
+
+internal final class Manager2: Initializable {
+    let gate = InitializationGate()
     
     @WaitForInit
-    func method1() async throws {}
+    func method() async {}
+}
+
+@AutoAwaitThrowingInit
+internal final class Manager3: ThrowingInitializable {
+    let gate = ThrowingInitializationGate()
     
-    func method2() async throws {}
+    func method() async throws {}
+}
+
+internal final class Manager4: ThrowingInitializable {
+    let gate = ThrowingInitializationGate()
+    
+    @WaitForThrowingInit
+    func method() async throws {}
 }
 
 struct ContentView: View {
-    let manager = Manager()
+    let manager1 = Manager1()
+    let manager2 = Manager2()
+    let manager3 = Manager3()
+    let manager4 = Manager4()
+    
     var body: some View {
         VStack {
             Button("Initialize Manager") {
-                Task { await manager.markInitialized() }
+                Task {
+                    await manager1.markInitialized()
+                    await manager2.markInitialized()
+                    await manager3.markInitialized()
+                    await manager4.markInitialized()
+                }
             }
             Button("Start method calls") {
                 debugPrint("----->>> Starting method calls")
@@ -31,11 +58,10 @@ struct ContentView: View {
                     await withThrowingTaskGroup(of: Void.self) { group in
                         for i in 0..<1_000 {
                             group.addTask {
-                                if i.isMultiple(of: 2) {
-                                    try await manager.method1()
-                                } else {
-                                    try await manager.method2()
-                                }
+                                await manager1.method()
+                                await manager2.method()
+                                try await manager3.method()
+                                try await manager4.method()
                                 debugPrint("----->>> Completed task with index: \(i)")
                             }
                         }
