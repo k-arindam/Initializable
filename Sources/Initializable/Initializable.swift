@@ -13,32 +13,72 @@ public protocol Initializable {
 }
 
 public extension Initializable {
+    var initialized: Bool {
+        get async {
+            if case .initialized = await initializationGate.state { return true }
+            return false
+        }
+    }
+    
     func markInitialized() async {
         await initializationGate.markInitialized()
     }
     
-    func awaitInitialized() async {
-        await initializationGate.wait()
+    func markFailed<E: Error>(_ error: E) async {
+        await initializationGate.markFailed(error)
+    }
+    
+    func awaitInitialized() async throws {
+        try await initializationGate.wait()
     }
 }
 
 public actor InitializationGate {
-    private var initialized = false
-    private var continuations = [CheckedContinuation<Void, Never>]()
+    private(set) var state: State = .pending
+    private var continuations = [UUID: CheckedContinuation<Void, any Error>]()
     
     public init() {}
     
     fileprivate func markInitialized() {
-        guard !initialized else { return }
-        initialized = true
-        continuations.forEach { $0.resume() }
+        guard case .pending = state else { return }
+        state = .initialized
+        continuations.values.forEach { $0.resume() }
         continuations.removeAll()
     }
     
-    fileprivate func wait() async {
-        if initialized { return }
-        await withCheckedContinuation(isolation: self) {
-            continuations.append($0)
+    fileprivate func markFailed<E: Error>(_ error: E) {
+        guard case .pending = state else { return }
+        state = .failed(error)
+        continuations.values.forEach { $0.resume(throwing: error) }
+        continuations.removeAll()
+    }
+    
+    fileprivate func wait() async throws {
+        switch state {
+        case .pending: break
+        case .initialized: return
+        case .failed(let error): throw error
         }
+        
+        let id = UUID()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation(isolation: self) {
+                continuations.updateValue($0, forKey: id)
+            }
+        } onCancel: {
+            Task { await self.cancel(id: id) }
+        }
+    }
+    
+    private func cancel(id: UUID) {
+        continuations
+            .removeValue(forKey: id)?
+            .resume(throwing: CancellationError())
+    }
+    
+    internal enum State {
+        case pending
+        case initialized
+        case failed(any Error)
     }
 }
