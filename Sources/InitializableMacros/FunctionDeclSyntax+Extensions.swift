@@ -23,10 +23,12 @@ internal extension FunctionDeclSyntax {
     func addingAsyncThrows() -> FunctionSignatureSyntax {
         var specifiers = signature.effectSpecifiers ?? FunctionEffectSpecifiersSyntax()
         if specifiers.asyncSpecifier == nil {
-            specifiers.asyncSpecifier = .keyword(.async)
+            specifiers.asyncSpecifier = .keyword(.async, leadingTrivia: .space, trailingTrivia: .space)
         }
         if specifiers.throwsClause == nil {
-            specifiers.throwsClause = ThrowsClauseSyntax(throwsSpecifier: .keyword(.throws))
+            specifiers.throwsClause = ThrowsClauseSyntax(throwsSpecifier:
+                    .keyword(.throws, leadingTrivia: .space, trailingTrivia: .space)
+            )
         }
         var newSignature = signature
         newSignature.effectSpecifiers = specifiers
@@ -36,7 +38,9 @@ internal extension FunctionDeclSyntax {
     func addingThrows() -> FunctionSignatureSyntax {
         var specifiers = signature.effectSpecifiers ?? FunctionEffectSpecifiersSyntax()
         if specifiers.throwsClause == nil {
-            specifiers.throwsClause = ThrowsClauseSyntax(throwsSpecifier: .keyword(.throws))
+            specifiers.throwsClause = ThrowsClauseSyntax(throwsSpecifier:
+                    .keyword(.throws, leadingTrivia: .space, trailingTrivia: .space)
+            )
         }
         var newSignature = signature
         newSignature.effectSpecifiers = specifiers
@@ -46,7 +50,7 @@ internal extension FunctionDeclSyntax {
     func addingAsync() -> FunctionSignatureSyntax {
         var specifiers = signature.effectSpecifiers ?? FunctionEffectSpecifiersSyntax()
         if specifiers.asyncSpecifier == nil {
-            specifiers.asyncSpecifier = .keyword(.async)
+            specifiers.asyncSpecifier = .keyword(.async, leadingTrivia: .space, trailingTrivia: .space)
         }
         var newSignature = signature
         newSignature.effectSpecifiers = specifiers
