@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftSyntax
+import SwiftSyntaxMacros
 
 // MARK: - Helpers
 
@@ -55,5 +56,24 @@ internal extension FunctionDeclSyntax {
         var newSignature = signature
         newSignature.effectSpecifiers = specifiers
         return newSignature
+    }
+    
+    /// Checks the inheritance clause of any type declaration for Initializable conformance
+    func conformsToInitializable(_ declaration: some DeclGroupSyntax) -> Bool {
+        declaration.inheritanceClause?.inheritedTypes.contains {
+            $0.type.trimmedDescription == "Initializable"
+        } ?? false
+    }
+    
+    /// Walks lexicalContext to find the nearest enclosing type declaration
+    func enclosingTypeDecl(
+        in context: some MacroExpansionContext
+    ) -> (any DeclGroupSyntax)? {
+        for syntax in context.lexicalContext {
+            if let decl = syntax.as(ActorDeclSyntax.self)  { return decl }
+            if let decl = syntax.as(ClassDeclSyntax.self)  { return decl }
+            if let decl = syntax.as(StructDeclSyntax.self) { return decl }
+        }
+        return nil
     }
 }

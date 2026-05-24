@@ -21,6 +21,24 @@ public struct WaitForInitMacro: BodyMacro {
               let body = funcDecl.body
         else { return [] }
         
+        let originalStatements = body.statements.map { $0 }
+        
+        guard let enclosing = funcDecl.enclosingTypeDecl(in: context) else {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: WaitForInitDiagnostic.notInType
+            ))
+            return originalStatements
+        }
+        
+        guard funcDecl.conformsToInitializable(enclosing) else {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: WaitForInitDiagnostic.notConforming
+            ))
+            return originalStatements
+        }
+        
         let isAsync = funcDecl.isAsync
         let isThrowing = funcDecl.isThrowing
         
@@ -42,7 +60,7 @@ public struct WaitForInitMacro: BodyMacro {
                     )
                 ]
             ))
-            return body.statements.map { $0 }
+            return originalStatements
             
         case (false, true):
             // throws but not async
@@ -61,7 +79,7 @@ public struct WaitForInitMacro: BodyMacro {
                     )
                 ]
             ))
-            return body.statements.map { $0 }
+            return originalStatements
             
         case (true, false):
             // async but not throws — most common mistake since old code didn't need throws
@@ -80,7 +98,7 @@ public struct WaitForInitMacro: BodyMacro {
                     )
                 ]
             ))
-            return body.statements.map { $0 }
+            return originalStatements
             
         case (true, true):
             // ✅ Correct — inject try await

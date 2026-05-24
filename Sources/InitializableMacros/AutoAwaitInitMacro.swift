@@ -25,6 +25,14 @@ public struct AutoAwaitInitMacro: MemberAttributeMacro {
               !excluded.contains(funcDecl.name.text)
         else { return [] }
         
+        guard funcDecl.conformsToInitializable(declaration) else {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: AutoAwaitInitDiagnostic.notConforming
+            ))
+            return []
+        }
+        
         let isAsync = funcDecl.isAsync
         let isThrowing = funcDecl.isThrowing
         
