@@ -10,39 +10,6 @@ import SwiftSyntax
 import SwiftDiagnostics
 import SwiftSyntaxMacros
 
-// Diagnostic definitions
-enum WaitForInitDiagnostic: DiagnosticMessage {
-    case appliedToSyncMethod
-    
-    var message: String {
-        switch self {
-        case .appliedToSyncMethod:
-            "@WaitForInit can only be applied to async functions"
-        }
-    }
-    
-    var diagnosticID: MessageID {
-        MessageID(domain: "InitializableMacros", id: "\(self)")
-    }
-    
-    var severity: DiagnosticSeverity { .error }
-}
-
-// Fix-it to add async
-enum WaitForInitFixIt: FixItMessage {
-    case addAsync
-    
-    var message: String {
-        switch self {
-        case .addAsync: "Add 'async'"
-        }
-    }
-    
-    var fixItID: MessageID {
-        MessageID(domain: "InitializableMacros", id: "\(self)")
-    }
-}
-
 // Prepends `await awaitInitialized()` to the function body
 public struct WaitForInitMacro: BodyMacro {
     public static func expansion(
@@ -54,38 +21,70 @@ public struct WaitForInitMacro: BodyMacro {
               let body = funcDecl.body
         else { return [] }
         
-        // Sync method — emit diagnostic + fix-it instead of expanding
-        guard funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil else {
-            let funcKeyword = funcDecl.funcKeyword
-            
-            // Build fix-it: insert `async` before the function name
-            let newEffectSpecifiers = FunctionEffectSpecifiersSyntax(
-                asyncSpecifier: .keyword(.async)
-            )
-            var newSignature = funcDecl.signature
-            newSignature.effectSpecifiers = newEffectSpecifiers
-            
-            var newFuncDecl = funcDecl
-            newFuncDecl.signature = newSignature
-            
+        let isAsync = funcDecl.isAsync
+        let isThrowing = funcDecl.isThrowing
+        
+        switch (isAsync, isThrowing) {
+        case (false, false):
+            // Neither async nor throws
             context.diagnose(Diagnostic(
                 node: node,
-                message: WaitForInitDiagnostic.appliedToSyncMethod,
+                message: WaitForInitDiagnostic.notAsyncThrowing,
                 fixIts: [
                     FixIt(
-                        message: WaitForInitFixIt.addAsync,
+                        message: WaitForInitFixIt.addAsyncThrows,
                         changes: [
                             .replace(
                                 oldNode: Syntax(funcDecl.signature),
-                                newNode: Syntax(newSignature)
+                                newNode: Syntax(funcDecl.addingAsyncThrows())
                             )
                         ]
                     )
                 ]
             ))
             return body.statements.map { $0 }
+            
+        case (false, true):
+            // throws but not async
+            context.diagnose(Diagnostic(
+                node: node,
+                message: WaitForInitDiagnostic.notAsync,
+                fixIts: [
+                    FixIt(
+                        message: WaitForInitFixIt.addAsync,
+                        changes: [
+                            .replace(
+                                oldNode: Syntax(funcDecl.signature),
+                                newNode: Syntax(funcDecl.addingAsync())
+                            )
+                        ]
+                    )
+                ]
+            ))
+            return body.statements.map { $0 }
+            
+        case (true, false):
+            // async but not throws — most common mistake since old code didn't need throws
+            context.diagnose(Diagnostic(
+                node: node,
+                message: WaitForInitDiagnostic.notThrowing,
+                fixIts: [
+                    FixIt(
+                        message: WaitForInitFixIt.addThrows,
+                        changes: [
+                            .replace(
+                                oldNode: Syntax(funcDecl.signature),
+                                newNode: Syntax(funcDecl.addingThrows())
+                            )
+                        ]
+                    )
+                ]
+            ))
+            return body.statements.map { $0 }
+            
+        case (true, true):
+            // ✅ Correct — inject try await
+            return ["try await awaitInitialized()"] + body.statements
         }
-        
-        return ["await awaitInitialized()"] + body.statements
     }
 }
