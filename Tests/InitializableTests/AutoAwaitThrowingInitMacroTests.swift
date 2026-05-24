@@ -2,9 +2,15 @@
 //  AutoAwaitThrowingInitMacroTests.swift
 //  InitializableTests
 //
-//  Tests for the @AutoAwaitThrowingInit member-attribute macro.
-//  Verifies correct stamping of @WaitForThrowingInit, exclusion rules,
-//  signature validation, diagnostics, and duplicate detection.
+//  Tests for the `@AutoAwaitThrowingInit` member-attribute macro.
+//
+//  Validates that the macro correctly stamps `@WaitForThrowingInit` on qualifying
+//  `async throws` methods, respects exclusion rules for protocol methods, skips
+//  non-qualifying signatures, and emits diagnostics for conformance errors,
+//  signature mismatches, and duplicate attribute detection.
+//
+//  Uses `assertMacroExpansion` from `SwiftSyntaxMacrosTestSupport` to verify
+//  compile-time attribute stamping without running the generated code.
 //
 
 import Testing
@@ -15,11 +21,21 @@ import InitializableMacros
 
 // MARK: - @AutoAwaitThrowingInit Member Attribute Macro Tests
 
+/// Test suite for the `@AutoAwaitThrowingInit` member-attribute macro.
+///
+/// Covers four categories:
+/// - **Happy path**: Verifies `@WaitForThrowingInit` is stamped on `async throws` methods.
+/// - **Exclusions**: Protocol methods (`markInitialized`, `markFailed`, `awaitInitialized`) are skipped.
+/// - **Edge cases**: Non-function members, sync/throws-only/async-only methods, mixed member types.
+/// - **Diagnostics**: Non-conforming types, async-not-throwing warnings, duplicate detection.
+///
+/// - SeeAlso: ``AutoAwaitThrowingInitMacro``
 @Suite("@AutoAwaitThrowingInit Macro")
 struct AutoAwaitThrowingInitMacroTests {
 
     // MARK: - Happy Path: Stamping on async throws methods
 
+    /// Verifies that `@WaitForThrowingInit` is stamped on `async throws` methods.
     @Test("Stamps @WaitForThrowingInit on async throws methods")
     func stampsOnAsyncThrowsMethods() {
         assertMacroExpansion(
@@ -44,6 +60,8 @@ struct AutoAwaitThrowingInitMacroTests {
 
     // MARK: - Happy Path: Exclusions
 
+    /// Verifies that `markInitialized`, `markFailed`, and `awaitInitialized` — the protocol's
+    /// own methods — are excluded from stamping.
     @Test("Excludes markInitialized, markFailed, and awaitInitialized")
     func doesNotStampExcludedMethods() {
         assertMacroExpansion(
@@ -71,6 +89,7 @@ struct AutoAwaitThrowingInitMacroTests {
 
     // MARK: - Edge Cases: Skipping non-async-throws signatures
 
+    /// Verifies that synchronous methods are silently skipped — no attribute, no diagnostic.
     @Test("Skips sync methods — no attribute stamped")
     func skipsSyncMethods() {
         assertMacroExpansion(
@@ -91,6 +110,7 @@ struct AutoAwaitThrowingInitMacroTests {
         )
     }
 
+    /// Verifies that `throws`-only (non-async) methods are silently skipped.
     @Test("Skips throws-only methods — no attribute stamped")
     func skipsThrowsOnlyMethods() {
         assertMacroExpansion(
@@ -111,6 +131,8 @@ struct AutoAwaitThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Async but Not Throwing
 
+    /// Verifies that an `async`-only method (missing `throws`) under `@AutoAwaitThrowingInit`
+    /// emits a "not throwing" diagnostic with a fix-it to add `throws`.
     @Test("Diagnoses async-only method — emits 'not throwing' with fix-it to add throws")
     func diagnosticAsyncNotThrowing() {
         assertMacroExpansion(
@@ -139,6 +161,7 @@ struct AutoAwaitThrowingInitMacroTests {
 
     // MARK: - Edge Cases: Non-Function Members
 
+    /// Verifies that properties and initializers do not receive `@WaitForThrowingInit`.
     @Test("Does not stamp properties, initializers")
     func doesNotStampNonMethods() {
         assertMacroExpansion(
@@ -164,6 +187,7 @@ struct AutoAwaitThrowingInitMacroTests {
         )
     }
 
+    /// Verifies that an empty actor body produces no attributes.
     @Test("Empty actor body produces no attributes")
     func emptyActorBody() {
         assertMacroExpansion(
@@ -180,6 +204,8 @@ struct AutoAwaitThrowingInitMacroTests {
         )
     }
 
+    /// Comprehensive test with all member kinds — verifies only `async throws` methods
+    /// are stamped, async-only gets a diagnostic, and everything else is skipped.
     @Test("Mix of all member kinds — stamps only async throws methods")
     func mixOfAllMemberKinds() {
         assertMacroExpansion(
@@ -227,6 +253,8 @@ struct AutoAwaitThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Not Conforming
 
+    /// Verifies the "not conforming" error when `@AutoAwaitThrowingInit` is applied to a
+    /// type without `ThrowingInitializable` conformance.
     @Test("Diagnoses when type does not conform to ThrowingInitializable")
     func diagnosticNotConforming() {
         assertMacroExpansion(
@@ -254,6 +282,8 @@ struct AutoAwaitThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Duplicate @WaitForThrowingInit
 
+    /// Verifies that a manually-applied `@WaitForThrowingInit` under `@AutoAwaitThrowingInit`
+    /// is diagnosed as redundant with a fix-it to remove it.
     @Test("Diagnoses duplicate @WaitForThrowingInit on a member with fix-it to remove")
     func diagnosticDuplicateWaitForThrowingInit() {
         assertMacroExpansion(
@@ -282,6 +312,8 @@ struct AutoAwaitThrowingInitMacroTests {
         )
     }
 
+    /// Verifies that the wrong variant (`@WaitForInit`) under `@AutoAwaitThrowingInit`
+    /// is also diagnosed as duplicate.
     @Test("Diagnoses duplicate @WaitForInit on a member under @AutoAwaitThrowingInit")
     func diagnosticDuplicateWaitForInit() {
         assertMacroExpansion(

@@ -2,8 +2,14 @@
 //  WaitForThrowingInitMacroTests.swift
 //  InitializableTests
 //
-//  Tests for the @WaitForThrowingInit body macro.
-//  Verifies correct code injection, all diagnostic branches, and fix-it suggestions.
+//  Tests for the `@WaitForThrowingInit` body macro.
+//
+//  Validates that the macro correctly injects `try await awaitInitialized()` at the
+//  start of `async throws` function bodies, and emits appropriate diagnostics for
+//  all four async/throws combinations when the signature is incorrect.
+//
+//  Uses `assertMacroExpansion` from `SwiftSyntaxMacrosTestSupport` to verify
+//  compile-time AST transformations without running the generated code.
 //
 
 import Testing
@@ -14,11 +20,21 @@ import InitializableMacros
 
 // MARK: - @WaitForThrowingInit Body Macro Tests
 
+/// Test suite for the `@WaitForThrowingInit` body macro.
+///
+/// Covers three categories:
+/// - **Happy path**: Verifies correct `try await awaitInitialized()` injection.
+/// - **Edge cases**: Empty bodies, complex signatures, body preservation on error paths.
+/// - **Diagnostics**: All four async/throws permutations, conformance checks, and scope validation.
+///
+/// - SeeAlso: ``WaitForThrowingInitMacro``
 @Suite("@WaitForThrowingInit Macro")
 struct WaitForThrowingInitMacroTests {
 
     // MARK: - Happy Path: Code Injection (async throws)
 
+    /// Verifies that `try await awaitInitialized()` is prepended to an `async throws` function.
+    /// This is the throwing variant — note `try await` instead of just `await`.
     @Test("Prepends 'try await awaitInitialized()' to async throws function body")
     func prependsTryAwaitInitialized() {
         assertMacroExpansion(
@@ -42,6 +58,7 @@ struct WaitForThrowingInitMacroTests {
         )
     }
 
+    /// Verifies that all original statements are preserved after the injected `try await` call.
     @Test("Preserves multi-statement body")
     func preservesMultiStatementBody() {
         assertMacroExpansion(
@@ -67,6 +84,7 @@ struct WaitForThrowingInitMacroTests {
         )
     }
 
+    /// Verifies that an `async throws` function with an empty body receives the injection.
     @Test("Handles empty body async throws function")
     func emptyBodyAsyncThrowsFunction() {
         assertMacroExpansion(
@@ -88,6 +106,7 @@ struct WaitForThrowingInitMacroTests {
         )
     }
 
+    /// Verifies correct expansion with complex parameter lists and named tuple return types.
     @Test("Complex signature with multiple params and tuple return")
     func complexSignature() {
         assertMacroExpansion(
@@ -111,6 +130,7 @@ struct WaitForThrowingInitMacroTests {
         )
     }
 
+    /// Verifies that guard and control flow statements are preserved after injection.
     @Test("Preserves guard and control flow in body")
     func preservesGuardAndControlFlow() {
         assertMacroExpansion(
@@ -138,6 +158,8 @@ struct WaitForThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Not Async Throws (sync, non-throwing)
 
+    /// Verifies that a synchronous, non-throwing function gets the "not async throws" diagnostic
+    /// with a fix-it to add both `async throws`.
     @Test("Diagnoses sync non-throwing function — emits 'not async throws' with fix-it")
     func diagnosticNotAsyncThrowing() {
         assertMacroExpansion(
@@ -170,6 +192,8 @@ struct WaitForThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Throws but Not Async
 
+    /// Verifies that a `throws`-only function gets the "not async" diagnostic
+    /// with a fix-it to add `async`.
     @Test("Diagnoses throws-only function — emits 'not async' with fix-it")
     func diagnosticNotAsync() {
         assertMacroExpansion(
@@ -202,6 +226,8 @@ struct WaitForThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Async but Not Throwing
 
+    /// Verifies that an `async`-only function gets the "not throwing" diagnostic
+    /// with a fix-it to add `throws`. This is the most common mistake when migrating.
     @Test("Diagnoses async-only function — emits 'not throwing' with fix-it")
     func diagnosticNotThrowing() {
         assertMacroExpansion(
@@ -234,6 +260,7 @@ struct WaitForThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Not Conforming
 
+    /// Verifies the "not conforming" error when the type lacks `ThrowingInitializable`.
     @Test("Diagnoses when type does not conform to ThrowingInitializable")
     func diagnosticNotConforming() {
         assertMacroExpansion(
@@ -265,6 +292,7 @@ struct WaitForThrowingInitMacroTests {
 
     // MARK: - Diagnostics: Not In Type
 
+    /// Verifies the "not in type" error when `@WaitForThrowingInit` is applied to a free function.
     @Test("Diagnoses when applied at free-function scope")
     func diagnosticNotInType() {
         assertMacroExpansion(
@@ -292,6 +320,8 @@ struct WaitForThrowingInitMacroTests {
 
     // MARK: - Edge: Returns Original Body on Error
 
+    /// Verifies that the original function body is returned **unchanged** when the macro
+    /// emits a diagnostic, ensuring the code remains valid even without the injection.
     @Test("Returns original body unchanged when diagnostic is emitted for sync function")
     func preservesBodyOnSyncDiagnostic() {
         assertMacroExpansion(
