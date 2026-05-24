@@ -42,6 +42,7 @@ let package = Package(
             name: "InitializableTests",
             dependencies: [
                 "Initializable",
+                "InitializableMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),
