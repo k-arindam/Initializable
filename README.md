@@ -408,13 +408,21 @@ Tests/
 
 Initializable provides rich compiler diagnostics with actionable fix-its. You'll never be left guessing what went wrong!
 
+### `@WaitForInit` & `@WaitForThrowingInit`
 | Scenario | Diagnostic Error Message | Xcode Fix-It Suggestion |
 |:---|:---|:---|
-| Sync function | `@WaitForInit requires the function to be 'async'` | Add `async` |
-| `throws` only | `@WaitForThrowingInit requires the function to be 'async'` | Add `async` |
-| `async` only (throwing) | `@WaitForThrowingInit requires the function to be 'throws'` | Add `throws` |
-| No conformance | `@WaitForInit can only be used in a type that conforms to 'Initializable'` | *None* |
-| Manual + Auto | `@WaitForInit should not be added manually when @AutoAwaitInit is applied` | Remove `@WaitForInit` |
+| **Sync function** | `@WaitForInit requires the function to be 'async'` | Add `async` |
+| **`throws`-only function** | `@WaitForThrowingInit requires the function to be 'async'` | Add `async` |
+| **`async`-only function** | `@WaitForThrowingInit requires the function to be 'throws'` | Add `throws` |
+| **Sync non-throwing** | `@WaitForThrowingInit requires the function to be 'async throws'` | Add `async throws` |
+| **No conformance** | `@WaitForInit can only be used in a type that conforms to 'Initializable'` | *None* |
+| **Free function** | `@WaitForInit can only be applied inside a type declaration` | *None* |
+
+### `@AutoAwaitInit` & `@AutoAwaitThrowingInit`
+| Scenario | Diagnostic Error Message | Xcode Fix-It Suggestion |
+|:---|:---|:---|
+| **No conformance** | `@AutoAwaitInit can only be applied to a type that conforms to 'Initializable'` | *None* |
+| **Duplicate attribute** | `@WaitForInit should not be added manually when @AutoAwaitInit is applied...` | Remove `@WaitForInit` |
 
 ---
 
