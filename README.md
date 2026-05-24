@@ -1,27 +1,29 @@
-<!-- <![CDATA[<div align="center"> -->
-
 # ⚡ Initializable
 
-**Async initialization gating for Swift actors — powered by macros.**
+**Zero-Boilerplate Async Initialization Gating for Swift Actors, Classes, and Structs**
 
 [![Swift 6.3](https://img.shields.io/badge/Swift-6.3-F05138?logo=swift&logoColor=white)](#requirements)
 [![Platforms](https://img.shields.io/badge/Platforms-iOS%2015%20|%20macOS%2012%20|%20tvOS%2015%20|%20watchOS%209-blue)](#requirements)
-[![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen)](#installation)
-[![License](https://img.shields.io/badge/license-MIT-lightgrey)](#license)
+[![SPM Compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)](#installation)
+[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](#license)
 
-*Stop scattering `guard isReady` checks everywhere.  
-Let the compiler enforce initialization gates for you.*
+*Stop scattering `guard isReady` checks everywhere. Let the Swift compiler enforce initialization gates for you using the power of Macros.*
 
-<!-- </div> -->
+> [!NOTE]  
+> **Initializable** guarantees that your type's async methods will automatically suspend until asynchronous setup is completely finished. No more runtime crashes due to uninitialized state. It works seamlessly with `actor`, `class`, and `struct`.
 
 ---
 
-## The Problem
+## 🛑 The Problem
 
-Actors often need asynchronous setup — connecting to a database, loading a config file, authenticating with a server. Every method that depends on this setup must somehow **wait** until it's done:
+Types like actors or classes often require asynchronous setup before they are ready to be used—connecting to a database, loading a configuration file, or authenticating with a remote server. 
+
+Every method that depends on this setup must somehow **wait** until it's done.
+
+### The Tedious Way (Without Initializable)
 
 ```swift
-actor DatabaseService {
+class DatabaseService {
     private var isReady = false
 
     func query(_ sql: String) async -> [Row] {
@@ -38,64 +40,68 @@ actor DatabaseService {
 }
 ```
 
-This is tedious, error-prone, and doesn't scale.
+This is tedious, highly error-prone, and doesn't scale as your codebase grows.
 
-## The Solution
+## ✨ The Solution
 
-**Initializable** gives you a single annotation on the actor, and every async method automatically waits for initialization:
+**Initializable** gives you a single, elegant annotation on your type. Every async method automatically waits for initialization to complete!
+
+### The Elegant Way (With Initializable)
 
 ```swift
 @AutoAwaitInit
-actor DatabaseService: Initializable {
+class DatabaseService: Initializable {
     let gate = InitializationGate()
 
     func setup() async {
         await connectToDatabase()
-        await markInitialized()  // 🔓 Gate opens — all waiting methods proceed
+        
+        // 🔓 Gate opens — all waiting methods proceed!
+        await markInitialized()  
     }
 
-    // ✅ Automatically waits for setup() — no boilerplate needed
+    // ✅ Automatically waits for setup() — ZERO boilerplate needed!
     func query(_ sql: String) async -> [Row] { ... }
     func insert(_ row: Row) async { ... }
     func delete(_ id: Int) async { ... }
 }
 ```
 
-Zero runtime overhead after initialization. Zero boilerplate. Zero chance of forgetting a check.
+> [!TIP]  
+> **Zero** runtime overhead after initialization. **Zero** boilerplate. **Zero** chance of forgetting a check.
 
 ---
 
-## Table of Contents
+## 📖 Table of Contents
 
-- [Quick Start](#quick-start)
-- [Core Concepts](#core-concepts)
-- [Usage Guide](#usage-guide)
-  - [Non-Throwing Initialization](#non-throwing-initialization)
-  - [Throwing Initialization (Failable)](#throwing-initialization-failable)
-  - [Manual Per-Method Control](#manual-per-method-control)
-- [Architecture](#architecture)
-- [Macro Reference](#macro-reference)
-- [Diagnostics & Fix-Its](#diagnostics--fix-its)
-- [API Reference](#api-reference)
-- [Installation](#installation)
-- [Requirements](#requirements)
-- [License](#license)
+- [Quick Start](#-quick-start)
+- [Core Concepts](#-core-concepts)
+- [Usage Guide](#-usage-guide)
+  - [Non-Throwing Initialization](#1-non-throwing-initialization)
+  - [Throwing Initialization (Failable)](#2-throwing-initialization-failable)
+  - [Manual Per-Method Control](#3-manual-per-method-control)
+- [Architecture](#-architecture)
+  - [File Map](#file-map)
+- [Macro Reference](#-macro-reference)
+- [Diagnostics & Fix-Its](#-diagnostics--fix-its)
+- [API Reference](#-api-reference)
+- [Installation](#-installation)
+- [Requirements](#-requirements)
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Add the Package
-
+In your `Package.swift`, add the dependency:
 ```swift
-// Package.swift
 dependencies: [
     .package(url: "https://github.com/k-arindam/Initializable.git", from: "1.0.0")
 ]
 ```
 
 ### 2. Import & Conform
-
+Import the module and annotate your type (can be `actor`, `class`, or `struct`):
 ```swift
 import Initializable
 
@@ -104,39 +110,43 @@ actor MyService: Initializable {
     let gate = InitializationGate()
 
     func setup() async {
-        // ... perform async initialization ...
+        // ... perform your async setup ...
         await markInitialized()
     }
 
     func fetchData() async -> Data {
-        // ← `await awaitInitialized()` is injected here by the macro
+        // ✨ MAGIC: `await awaitInitialized()` is injected here by the macro
         return cachedData
     }
 }
 ```
 
 ### 3. Use It
-
+Simply call your methods. They will automatically wait if setup isn't finished!
 ```swift
 let service = MyService()
 
-// Can be called immediately — it will suspend until setup() completes
+// Kick off the setup (it will run concurrently)
 Task { await service.setup() }
-let data = await service.fetchData()  // Waits automatically ✨
+
+// This call will safely suspend until `setup()` completes!
+let data = await service.fetchData()  
 ```
 
 ---
 
-## Core Concepts
+## 🧠 Core Concepts
+
+At a high level, Initializable uses Swift Macros to inject gating logic at compile time, and an Actor-based state machine to manage continuations at runtime.
 
 ```mermaid
 graph LR
-    subgraph "Compile Time"
+    subgraph "🛠 Compile Time"
         A["@AutoAwaitInit"] -->|stamps| B["@WaitForInit"]
         B -->|injects| C["await awaitInitialized()"]
     end
 
-    subgraph "Runtime"
+    subgraph "🏃‍♂️ Runtime"
         D["InitializationGate"] -->|pending| E["Callers suspend"]
         D -->|markInitialized| F["Callers resume"]
     end
@@ -144,35 +154,35 @@ graph LR
     C -.->|calls| D
 ```
 
-| Concept | What It Does |
-|---------|-------------|
-| **Protocol** (`Initializable`) | Requires a `gate` property; provides `markInitialized()`, `awaitInitialized()`, `initialized` |
-| **Gate** (`InitializationGate`) | Actor that holds continuations and resumes them when the gate opens |
-| **Body Macro** (`@WaitForInit`) | Injects `await awaitInitialized()` at the start of a single method |
-| **Member Attribute Macro** (`@AutoAwaitInit`) | Stamps `@WaitForInit` on **all** async methods in the type |
+| Concept | Description |
+|:---|:---|
+| 📜 **Protocol** (`Initializable`) | Requires a `gate` property. Provides `markInitialized()`, `awaitInitialized()`, and `initialized`. |
+| 🚧 **Gate** (`InitializationGate`) | Actor that safely holds continuations and resumes them when the gate opens. |
+| 💉 **Body Macro** (`@WaitForInit`) | Injects `await awaitInitialized()` at the start of a single specific method. |
+| 🏷️ **Member Macro** (`@AutoAwaitInit`) | Automatically stamps `@WaitForInit` on **all** async methods in the type. |
 
-There are **throwing variants** of each for failable initialization:
+### Variants
+There are **throwing variants** of each component for failable initialization (e.g. network requests that might fail):
 
-| Non-Throwing | Throwing (Failable) |
-|-------------|-------------------|
-| `Initializable` | `ThrowingInitializable` |
-| `InitializationGate` | `ThrowingInitializationGate` |
-| `@WaitForInit` | `@WaitForThrowingInit` |
-| `@AutoAwaitInit` | `@AutoAwaitThrowingInit` |
+| Component Type | Non-Throwing | Throwing (Failable) |
+|:---|:---|:---|
+| **Protocol** | `Initializable` | `ThrowingInitializable` |
+| **Gate** | `InitializationGate` | `ThrowingInitializationGate` |
+| **Body Macro** | `@WaitForInit` | `@WaitForThrowingInit` |
+| **Member Macro**| `@AutoAwaitInit` | `@AutoAwaitThrowingInit` |
 
 ---
 
-## Usage Guide
+## 📚 Usage Guide
 
-### Non-Throwing Initialization
-
-Use when your setup **cannot fail** (e.g., loading a local cache, connecting to an in-memory store):
+### 1. Non-Throwing Initialization
+Use this when your setup **cannot fail** (e.g., loading a local cache, connecting to an in-memory store).
 
 ```swift
 import Initializable
 
 @AutoAwaitInit
-actor CacheService: Initializable {
+class CacheService: Initializable {
     let gate = InitializationGate()
     private var store: [String: Data] = [:]
 
@@ -181,14 +191,9 @@ actor CacheService: Initializable {
         await markInitialized()
     }
 
-    // ✅ Auto-gated — waits for warmUp()
+    // ✅ Auto-gated — automatically waits for warmUp()
     func get(_ key: String) async -> Data? {
         return store[key]
-    }
-
-    // ✅ Auto-gated
-    func set(_ key: String, value: Data) async {
-        store[key] = value
     }
 
     // ❌ Sync — skipped by the macro (no gate needed)
@@ -198,7 +203,7 @@ actor CacheService: Initializable {
 }
 ```
 
-**What happens at compile time:**
+### View Compile-Time Expansion Flow
 
 ```mermaid
 flowchart TD
@@ -211,7 +216,7 @@ flowchart TD
     F -->|No| H["Stamp @WaitForInit ✅"]
 ```
 
-**What happens at runtime:**
+### What Happens at Runtime
 
 ```mermaid
 sequenceDiagram
@@ -237,45 +242,40 @@ sequenceDiagram
     Note over Gate: Future calls return immediately
 ```
 
----
+### 2. Throwing Initialization (Failable)
+Use this when your setup **can fail** (e.g., network connections, database migrations, API authentication).
 
-### Throwing Initialization (Failable)
-
-Use when your setup **can fail** (e.g., network connections, database migrations):
+> [!IMPORTANT]  
+> You must use `ThrowingInitializable`, `ThrowingInitializationGate`, and `@AutoAwaitThrowingInit`.
 
 ```swift
 import Initializable
 
 @AutoAwaitThrowingInit
-actor DatabaseService: ThrowingInitializable {
+struct DatabaseService: ThrowingInitializable {
     let gate = ThrowingInitializationGate()
     private var connection: DBConnection?
 
-    func connect(to url: URL) async {
+    mutating func connect(to url: URL) async {
         do {
             connection = try await DBConnection.open(url)
             await markInitialized()    // ✅ Success
         } catch {
-            await markFailed(error)    // ❌ Propagate to all waiters
+            await markFailed(error)    // ❌ Propagate error to all waiting methods
         }
     }
 
-    // ✅ Auto-gated — waits or throws
+    // ✅ Auto-gated — waits for connect, or throws if connect failed
     func query(_ sql: String) async throws -> [Row] {
         return try await connection!.execute(sql)
     }
 
-    // ✅ Auto-gated
-    func insert(_ row: Row) async throws {
-        try await connection!.insert(row)
-    }
-
-    // ⚠️ async but not throws — macro emits diagnostic with fix-it
+    // ⚠️ WARNING: If a method is async but NOT throws, the macro will emit a compiler diagnostic with a fix-it!
     // func ping() async -> Bool { ... }
 }
 ```
 
-**State machine for ThrowingInitializationGate:**
+### View Throwing State Machine
 
 ```mermaid
 stateDiagram-v2
@@ -293,14 +293,10 @@ stateDiagram-v2
     note right of Failed : awaitInitialized() → throws stored error
     note right of Pending : awaitInitialized() → suspends
 ```
+> **State Stickiness**: The first call to `markInitialized()` or `markFailed(_:)` wins. Subsequent calls to either method are safe **no-ops**.
 
-> **State Stickiness**: The first call to `markInitialized()` or `markFailed(_:)` wins. Subsequent calls to either method are **no-ops**. This prevents race conditions where both success and failure paths might execute.
-
----
-
-### Manual Per-Method Control
-
-If you prefer fine-grained control instead of the blanket `@AutoAwaitInit`, apply `@WaitForInit` to individual methods:
+### 3. Manual Per-Method Control
+If you prefer fine-grained control instead of the blanket `@AutoAwaitInit` macro, you can apply `@WaitForInit` to individual methods manually:
 
 ```swift
 actor SelectiveService: Initializable {
@@ -308,12 +304,12 @@ actor SelectiveService: Initializable {
 
     func setup() async { await markInitialized() }
 
-    @WaitForInit  // ← Only this method waits
+    @WaitForInit  // ← Only this method will wait
     func criticalOperation() async -> Result {
         return performWork()
     }
 
-    // No macro — caller is responsible for timing
+    // No macro — caller is entirely responsible for timing
     func bestEffortOperation() async -> Result? {
         return try? performWork()
     }
@@ -322,9 +318,9 @@ actor SelectiveService: Initializable {
 
 ---
 
-## Architecture
+## 🏗 Architecture
 
-### Module Structure
+Initializable is split into the runtime library and the compile-time macro plugin.
 
 ```mermaid
 graph TB
@@ -332,13 +328,13 @@ graph TB
         App["App Code"]
     end
 
-    subgraph "Initializable Module"
+    subgraph "📦 Initializable Module"
         Proto["Initializable Protocol<br/>ThrowingInitializable Protocol"]
         Gate["InitializationGate<br/>ThrowingInitializationGate"]
         Macros["Macro Declarations<br/>@AutoAwaitInit, @WaitForInit, etc."]
     end
 
-    subgraph "InitializableMacros Module (Compiler Plugin)"
+    subgraph "🔌 InitializableMacros Module (Compiler Plugin)"
         MacroImpl["AutoAwaitInitMacro<br/>WaitForInitMacro"]
         Diag["Diagnostics & Fix-Its"]
         Helpers["Syntax Helpers"]
@@ -362,7 +358,7 @@ graph TB
 
 ### File Map
 
-```
+```text
 Sources/
 ├── Initializable/                         # Public API
 │   ├── Enums.swift                        # InitializationState, GateType
@@ -389,142 +385,81 @@ Tests/
 
 ---
 
-## Macro Reference
+## 🔍 Macro Reference
 
-### `@AutoAwaitInit`
-
-| Property | Value |
-|----------|-------|
+### `@AutoAwaitInit` & `@AutoAwaitThrowingInit`
+| Feature | Details |
+|:---|:---|
 | **Type** | `@attached(memberAttribute)` |
-| **Applied to** | Actor / Class / Struct conforming to `Initializable` |
-| **Effect** | Stamps `@WaitForInit` on every `async` method |
-| **Excludes** | `markInitialized()`, `awaitInitialized()`, non-function members, sync methods |
+| **Target** | Actor / Class / Struct conforming to `Initializable` (or `ThrowingInitializable`) |
+| **Effect** | Stamps `@WaitForInit` (or `@WaitForThrowingInit`) on every qualifying async method |
+| **Excludes** | `markInitialized()`, `awaitInitialized()`, `markFailed()`, non-function members, sync methods |
 
-### `@AutoAwaitThrowingInit`
-
-| Property | Value |
-|----------|-------|
-| **Type** | `@attached(memberAttribute)` |
-| **Applied to** | Actor / Class / Struct conforming to `ThrowingInitializable` |
-| **Effect** | Stamps `@WaitForThrowingInit` on every `async throws` method |
-| **Excludes** | `markInitialized()`, `markFailed()`, `awaitInitialized()`, non-function members |
-| **Warns** | `async`-only methods get a "not throwing" diagnostic with fix-it |
-
-### `@WaitForInit`
-
-| Property | Value |
-|----------|-------|
+### `@WaitForInit` & `@WaitForThrowingInit`
+| Feature | Details |
+|:---|:---|
 | **Type** | `@attached(body)` |
-| **Applied to** | Individual `async` function inside an `Initializable` type |
-| **Effect** | Prepends `await awaitInitialized()` to the function body |
-| **Injected code** | `await awaitInitialized()` |
-
-### `@WaitForThrowingInit`
-
-| Property | Value |
-|----------|-------|
-| **Type** | `@attached(body)` |
-| **Applied to** | Individual `async throws` function inside a `ThrowingInitializable` type |
-| **Effect** | Prepends `try await awaitInitialized()` to the function body |
-| **Injected code** | `try await awaitInitialized()` |
+| **Target** | Individual `async` (or `async throws`) function inside a conforming type |
+| **Effect** | Prepends `await awaitInitialized()` (or `try await...`) to the function body |
 
 ---
 
-## Diagnostics & Fix-Its
+## 🛠 Diagnostics & Fix-Its
 
-The macros provide rich compiler diagnostics with actionable fix-its. You'll never be left guessing what went wrong.
+Initializable provides rich compiler diagnostics with actionable fix-its. You'll never be left guessing what went wrong!
 
-### `@WaitForInit` / `@WaitForThrowingInit` Diagnostics
-
-| Scenario | Diagnostic Message | Fix-It |
-|----------|-------------------|--------|
+| Scenario | Diagnostic Error Message | Xcode Fix-It Suggestion |
+|:---|:---|:---|
 | Sync function | `@WaitForInit requires the function to be 'async'` | Add `async` |
 | `throws` only | `@WaitForThrowingInit requires the function to be 'async'` | Add `async` |
-| `async` only (throwing variant) | `@WaitForThrowingInit requires the function to be 'throws'` | Add `throws` |
-| Sync non-throwing | `@WaitForThrowingInit requires the function to be 'async throws'` | Add `async throws` |
-| No conformance | `@WaitForInit can only be used in a type that conforms to 'Initializable'` | — |
-| Free function | `@WaitForInit can only be applied inside a type declaration` | — |
-
-### `@AutoAwaitInit` / `@AutoAwaitThrowingInit` Diagnostics
-
-| Scenario | Diagnostic Message | Fix-It |
-|----------|-------------------|--------|
-| No conformance | `@AutoAwaitInit can only be applied to a type that conforms to 'Initializable'` | — |
-| Manual `@WaitForInit` | `@WaitForInit should not be added manually when @AutoAwaitInit is applied` | Remove `@WaitForInit` |
-| `async` missing `throws` | `@WaitForThrowingInit requires the function to be 'throws'` | Add `throws` |
+| `async` only (throwing) | `@WaitForThrowingInit requires the function to be 'throws'` | Add `throws` |
+| No conformance | `@WaitForInit can only be used in a type that conforms to 'Initializable'` | *None* |
+| Manual + Auto | `@WaitForInit should not be added manually when @AutoAwaitInit is applied` | Remove `@WaitForInit` |
 
 ---
 
-## API Reference
+## 📖 API Reference
 
 ### Protocols
 
 #### `Initializable`
-
 ```swift
 public protocol Initializable {
     var gate: InitializationGate { get }
 }
 ```
-
-| Member | Signature | Description |
-|--------|-----------|-------------|
-| `gate` | `var gate: InitializationGate { get }` | The gate instance (provide as `let gate = InitializationGate()`) |
-| `initialized` | `var initialized: Bool { get async }` | `true` after `markInitialized()` |
-| `markInitialized()` | `func markInitialized() async` | Opens the gate; idempotent |
-| `awaitInitialized()` | `func awaitInitialized() async` | Suspends until gate opens |
+* `initialized`: Async boolean property. Returns `true` after `markInitialized()`.
+* `markInitialized()`: Opens the gate. Safe to call multiple times (idempotent).
+* `awaitInitialized()`: Suspends execution until the gate is opened.
 
 #### `ThrowingInitializable`
-
 ```swift
 public protocol ThrowingInitializable {
     var gate: ThrowingInitializationGate { get }
 }
 ```
-
-| Member | Signature | Description |
-|--------|-----------|-------------|
-| `gate` | `var gate: ThrowingInitializationGate { get }` | The throwing gate instance |
-| `initialized` | `var initialized: Bool { get async }` | `true` only after `markInitialized()`, `false` after `markFailed()` |
-| `markInitialized()` | `func markInitialized() async` | Opens the gate; idempotent; no-op if already failed |
-| `markFailed(_:)` | `func markFailed<E: Error>(_ error: E) async` | Fails the gate with the given error; idempotent |
-| `awaitInitialized()` | `func awaitInitialized() async throws` | Suspends until resolved; throws on failure |
+* `initialized`: Async boolean property. Returns `true` only on success.
+* `markFailed<E: Error>(_ error: E)`: Fails the gate with the given error. Idempotent.
+* `awaitInitialized() throws`: Suspends until resolved; throws if initialization failed.
 
 ### Gates
 
 #### `InitializationGate`
-
-```swift
-public actor InitializationGate {
-    public init()
-}
-```
-
-- **Continuation type**: `CheckedContinuation<Void, Never>`
-- **Cancellation**: Resumes normally (returns `Void`)
-- **Thread safety**: Actor-isolated — all state is serial
+* **Continuation type**: `CheckedContinuation<Void, Never>`
+* **Cancellation**: Resumes normally (returns `Void`). Task cancellation will not throw.
+* **Thread safety**: Actor-isolated — all state mutations are serial.
 
 #### `ThrowingInitializationGate`
-
-```swift
-public actor ThrowingInitializationGate {
-    public init()
-}
-```
-
-- **Continuation type**: `CheckedContinuation<Void, any Error>`
-- **Cancellation**: Throws `CancellationError`
-- **Failure**: Throws the error passed to `markFailed(_:)`
-- **State stickiness**: First resolution wins
+* **Continuation type**: `CheckedContinuation<Void, any Error>`
+* **Cancellation**: Throws `CancellationError` automatically if the waiting task is cancelled.
+* **State stickiness**: The first resolution (success or failure) permanently locks the state.
 
 ---
 
-## Installation
+## 📦 Installation
 
 ### Swift Package Manager
-
-Add to your `Package.swift`:
-
+Add the dependency to your `Package.swift`:
 ```swift
 dependencies: [
     .package(url: "https://github.com/k-arindam/Initializable.git", from: "1.0.0")
@@ -537,30 +472,28 @@ targets: [
 ]
 ```
 
-Or in Xcode: **File → Add Package Dependencies** → paste the repository URL.
+Or via Xcode: **File → Add Package Dependencies** → paste the repository URL.
 
 ---
 
-## Requirements
+## ⚙️ Requirements
 
-| Requirement | Minimum |
-|------------|---------|
-| Swift | 6.3 |
-| Xcode | 16.3 |
-| iOS | 15.0 |
-| macOS | 12.0 |
-| tvOS | 15.0 |
-| watchOS | 9.0 |
-| Mac Catalyst | 15.0 |
+| Platform/Tool | Minimum Version |
+|:---|:---|
+| **Swift** | 6.3 |
+| **Xcode** | 16.3 |
+| **iOS** | 15.0 |
+| **macOS** | 12.0 |
+| **tvOS** | 15.0 |
+| **watchOS** | 9.0 |
 
-> **Note**: Swift macros require Swift 5.9+, but this package uses Swift 6.3 features including `@attached(body)` macros and `CheckedContinuation` with `isolation:`.
+> [!NOTE]  
+> Swift macros generally require Swift 5.9+, but this package leverages advanced Swift 6.3 features including `@attached(body)` macros and `CheckedContinuation` isolation.
 
 ---
 
-## License
+## 📄 License
 
 This project is available under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
 
 **Built with ❤️ using Swift Macros**
