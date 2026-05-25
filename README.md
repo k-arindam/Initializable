@@ -2,8 +2,8 @@
 
 **Zero-Boilerplate Async Initialization Gating for Swift Actors, Classes, and Structs**
 
-[![Swift 6.3](https://img.shields.io/badge/Swift-6.3-F05138?logo=swift&logoColor=white)](#requirements)
-[![Platforms](https://img.shields.io/badge/Platforms-iOS%2015%20|%20macOS%2012%20|%20tvOS%2015%20|%20watchOS%209-blue)](#requirements)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fk-arindam%2FInitializable%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/k-arindam/Initializable)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fk-arindam%2FInitializable%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/k-arindam/Initializable)
 [![SPM Compatible](https://img.shields.io/badge/SPM-compatible-brightgreen)](#installation)
 [![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg)](#license)
 
