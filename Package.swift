@@ -21,7 +21,8 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "603.0.1")
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "603.0.1"),
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin.git", from: "1.5.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
