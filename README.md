@@ -1,6 +1,4 @@
-# ⚡ Initializable
-
-**Zero-Boilerplate Async Initialization Gating for Swift Actors, Classes, and Structs**
+![Initializable — Zero-Boilerplate Async Initialization Gating for Swift](initializable-banner.png)
 
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fk-arindam%2FInitializable%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/k-arindam/Initializable)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fk-arindam%2FInitializable%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/k-arindam/Initializable)
