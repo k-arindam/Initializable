@@ -96,7 +96,7 @@ class DatabaseService: Initializable {
 In your `Package.swift`, add the dependency:
 ```swift
 dependencies: [
-    .package(url: "https://github.com/k-arindam/Initializable.git", from: "1.0.0")
+    .package(url: "https://github.com/k-arindam/Initializable.git", from: "1.1.0")
 ]
 ```
 
@@ -470,7 +470,7 @@ public protocol ThrowingInitializable {
 Add the dependency to your `Package.swift`:
 ```swift
 dependencies: [
-    .package(url: "https://github.com/k-arindam/Initializable.git", from: "1.0.0")
+    .package(url: "https://github.com/k-arindam/Initializable.git", from: "1.1.0")
 ],
 targets: [
     .target(
