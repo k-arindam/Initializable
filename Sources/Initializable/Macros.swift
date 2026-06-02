@@ -153,3 +153,9 @@ public macro WaitForThrowingInit() = #externalMacro(
     module: "InitializableMacros",
     type: "WaitForThrowingInitMacro"
 )
+
+@attached(peer)
+public macro SkipInit() = #externalMacro(
+    module: "InitializableMacros",
+    type: "SkipInitMacro"
+)

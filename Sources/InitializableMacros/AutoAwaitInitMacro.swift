@@ -74,7 +74,11 @@ public struct AutoAwaitInitMacro: MemberAttributeMacro {
             on: funcDecl,
             throwing: false,
             in: context
-        ), !funcDecl.isAsync { return [] }
+        ) { return [] }
+        
+        guard funcDecl.isAsync else { return [] }
+        
+        if hasSkipInit(on: funcDecl) { return [] }
         
         return ["@WaitForInit"]
     }
@@ -140,6 +144,8 @@ public struct AutoAwaitThrowingInitMacro: MemberAttributeMacro {
             throwing: true,
             in: context
         ) { return [] }
+        
+        if hasSkipInit(on: funcDecl) { return [] }
         
         let isAsync = funcDecl.isAsync
         let isThrowing = funcDecl.isThrowing

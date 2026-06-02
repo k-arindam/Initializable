@@ -30,5 +30,6 @@ struct InitializableMacrosPlugin: CompilerPlugin {
         AutoAwaitThrowingInitMacro.self,
         WaitForInitMacro.self,
         WaitForThrowingInitMacro.self,
+        SkipInitMacro.self
     ]
 }

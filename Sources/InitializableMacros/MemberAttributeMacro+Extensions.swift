@@ -81,4 +81,10 @@ internal extension MemberAttributeMacro {
         ))
         return true
     }
+    
+    static func hasSkipInit(on funcDecl: FunctionDeclSyntax) -> Bool {
+        funcDecl.attributes.contains {
+            $0.as(AttributeSyntax.self)?.attributeName.trimmedDescription == "SkipInit"
+        }
+    }
 }

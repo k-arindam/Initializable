@@ -15,7 +15,7 @@
 //
 
 import Testing
-import Initializable
+@testable import Initializable
 
 // MARK: - Test Helper Actors (Non-Throwing)
 

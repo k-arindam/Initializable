@@ -16,7 +16,7 @@ import Testing
 import SwiftSyntaxMacrosTestSupport
 
 #if canImport(InitializableMacros)
-import InitializableMacros
+@testable import InitializableMacros
 
 // MARK: - @AutoAwaitInit Member Attribute Macro Tests
 

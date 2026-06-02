@@ -30,18 +30,18 @@ enum WaitForInitDiagnostic: DiagnosticMessage {
     ///
     /// - Parameter throwing: `true` for `@WaitForThrowingInit`, `false` for `@WaitForInit`.
     case notAsync(throwing: Bool)
-
+    
     /// The function is `async` but not `throws`.
     ///
     /// Emitted by `@WaitForThrowingInit` when the function is async but missing `throws`.
     /// This is the most common mistake when migrating from non-throwing to throwing initialization.
     case notThrowing
-
+    
     /// The function is neither `async` nor `throws`.
     ///
     /// Emitted by `@WaitForThrowingInit` when both specifiers are missing.
     case notAsyncThrowing
-
+    
     /// The enclosing type does not conform to the required protocol.
     ///
     /// Emitted when the enclosing type lacks `Initializable` (for `@WaitForInit`)
@@ -49,7 +49,7 @@ enum WaitForInitDiagnostic: DiagnosticMessage {
     ///
     /// - Parameter throwing: `true` for `ThrowingInitializable`, `false` for `Initializable`.
     case notConforming(throwing: Bool)
-
+    
     /// The macro is applied outside of any type declaration (e.g., on a free function).
     ///
     /// Body macros require a lexical enclosing type to verify protocol conformance.
@@ -97,10 +97,10 @@ enum WaitForInitDiagnostic: DiagnosticMessage {
 enum WaitForInitFixIt: FixItMessage {
     /// Suggests adding the `async` keyword to the function signature.
     case addAsync
-
+    
     /// Suggests adding the `throws` keyword to the function signature.
     case addThrows
-
+    
     /// Suggests adding both `async throws` to the function signature.
     case addAsyncThrows
     
@@ -135,7 +135,7 @@ enum AutoAwaitInitDiagnostic: DiagnosticMessage {
     ///
     /// - Parameter throwing: `true` for `@AutoAwaitThrowingInit`, `false` for `@AutoAwaitInit`.
     case notConforming(throwing: Bool)
-
+    
     /// A `@WaitForInit` or `@WaitForThrowingInit` attribute was manually applied to a member
     /// when the enclosing type already has `@AutoAwaitInit` or `@AutoAwaitThrowingInit`.
     ///
@@ -194,6 +194,37 @@ enum AutoAwaitInitFixIt: FixItMessage {
     }
     
     /// A unique identifier for this fix-it within the `InitializableMacros` domain.
+    var fixItID: MessageID {
+        MessageID(domain: "InitializableMacros", id: "\(self)")
+    }
+}
+
+
+enum SkipInitDiagnostic: DiagnosticMessage {
+    case notInsideAutoAwaitInit   // enclosing type lacks @AutoAwaitInit / @AutoAwaitThrowingInit
+    case notAsync                 // applied to a non-async function
+    
+    var message: String {
+        switch self {
+        case .notInsideAutoAwaitInit:
+            "@SkipInit can only be used inside a type marked with @AutoAwaitInit or @AutoAwaitThrowingInit"
+        case .notAsync:
+            "@SkipInit can only be applied to async functions, sync functions are never wrapped"
+        }
+    }
+    
+    var diagnosticID: MessageID {
+        MessageID(domain: "InitializableMacros", id: "\(self)")
+    }
+    
+    var severity: DiagnosticSeverity { .error }
+}
+
+enum SkipInitFixIt: FixItMessage {
+    case removeSkipInit
+    
+    var message: String { "Remove '@SkipInit'" }
+    
     var fixItID: MessageID {
         MessageID(domain: "InitializableMacros", id: "\(self)")
     }
