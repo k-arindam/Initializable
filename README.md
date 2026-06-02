@@ -78,6 +78,7 @@ class DatabaseService: Initializable {
   - [Non-Throwing Initialization](#1-non-throwing-initialization)
   - [Throwing Initialization (Failable)](#2-throwing-initialization-failable)
   - [Manual Per-Method Control](#3-manual-per-method-control)
+  - [Opting Out with @SkipInit](#4-opting-out-with-skipinit)
 - [Architecture](#-architecture)
   - [File Map](#file-map)
 - [Macro Reference](#-macro-reference)
@@ -158,6 +159,7 @@ graph LR
 | 🚧 **Gate** (`InitializationGate`) | Actor that safely holds continuations and resumes them when the gate opens. |
 | 💉 **Body Macro** (`@WaitForInit`) | Injects `await awaitInitialized()` at the start of a single specific method. |
 | 🏷️ **Member Macro** (`@AutoAwaitInit`) | Automatically stamps `@WaitForInit` on **all** async methods in the type. |
+| 🚫 **Opt-Out Macro** (`@SkipInit`) | Excludes a specific `async` method from automatic `@WaitForInit` stamping. |
 
 ### Variants
 There are **throwing variants** of each component for failable initialization (e.g. network requests that might fail):
@@ -211,7 +213,9 @@ flowchart TD
     D -->|No| E["Skip (sync method)"]
     D -->|Yes| F{"Is it a protocol method?"}
     F -->|"markInitialized / awaitInitialized"| G["Skip (excluded)"]
-    F -->|No| H["Stamp @WaitForInit ✅"]
+    F -->|No| I{"Has @SkipInit?"}
+    I -->|Yes| J["Skip (opted out) 🚫"]
+    I -->|No| H["Stamp @WaitForInit ✅"]
 ```
 
 ### What Happens at Runtime
@@ -314,6 +318,41 @@ actor SelectiveService: Initializable {
 }
 ```
 
+### 4. Opting Out with `@SkipInit`
+When using `@AutoAwaitInit` or `@AutoAwaitThrowingInit`, **every** async method gets gated automatically. But sometimes you need a specific method to run *before* initialization completes — for example, the setup method itself, a cancellation handler, or a status check.
+
+Mark those methods with `@SkipInit` to exclude them:
+
+```swift
+import Initializable
+
+@AutoAwaitInit
+actor NetworkService: Initializable {
+    let gate = InitializationGate()
+    private var session: URLSession?
+
+    // 🚫 Opted out — this IS the initialization method
+    @SkipInit
+    func bootstrap() async {
+        session = await createSession()
+        await markInitialized()
+    }
+
+    // 🚫 Opted out — must be callable anytime
+    @SkipInit
+    func status() async -> String {
+        return await initialized ? "ready" : "starting…"
+    }
+
+    // ✅ Auto-gated — waits for bootstrap()
+    func fetch(_ url: URL) async -> Data { ... }
+    func upload(_ data: Data) async { ... }
+}
+```
+
+> [!TIP]  
+> `@SkipInit` only works inside types that have `@AutoAwaitInit` or `@AutoAwaitThrowingInit`. Applying it elsewhere emits a compiler error with a fix-it.
+
 ---
 
 ## 🏗 Architecture
@@ -362,15 +401,16 @@ Sources/
 │   ├── Enums.swift                        # InitializationState, GateType
 │   ├── Gate.swift                         # InitializationGate, ThrowingInitializationGate
 │   ├── Initializable.swift                # Initializable, ThrowingInitializable protocols
-│   └── Macros.swift                       # @AutoAwaitInit, @WaitForInit declarations
+│   └── Macros.swift                       # @AutoAwaitInit, @WaitForInit, @SkipInit declarations
 │
 └── InitializableMacros/                   # Compiler plugin (not shipped in binary)
     ├── InitializableMacros.swift           # @main plugin entry point
     ├── AutoAwaitInitMacro.swift            # Member-attribute macro implementations
     ├── WaitForInitMacro.swift              # Body macro implementations
+    ├── SkipInitMacro.swift                # @SkipInit peer macro implementation
     ├── Messages.swift                      # Diagnostic & fix-it messages
     ├── FunctionDeclSyntax+Extensions.swift # AST inspection helpers
-    └── MemberAttributeMacro+Extensions.swift # Duplicate detection logic
+    └── MemberAttributeMacro+Extensions.swift # Duplicate & @SkipInit detection logic
 
 Tests/
 └── InitializableTests/
@@ -378,6 +418,7 @@ Tests/
     ├── WaitForThrowingInitMacroTests.swift  # @WaitForThrowingInit body macro tests
     ├── AutoAwaitInitMacroTests.swift        # @AutoAwaitInit member-attribute tests
     ├── AutoAwaitThrowingInitMacroTests.swift # @AutoAwaitThrowingInit tests
+    ├── SkipInitMacroTests.swift             # @SkipInit peer macro tests
     └── RuntimeTests.swift                   # Gate & protocol runtime behavior tests
 ```
 
@@ -391,7 +432,7 @@ Tests/
 | **Type** | `@attached(memberAttribute)` |
 | **Target** | Actor / Class / Struct conforming to `Initializable` (or `ThrowingInitializable`) |
 | **Effect** | Stamps `@WaitForInit` (or `@WaitForThrowingInit`) on every qualifying async method |
-| **Excludes** | `markInitialized()`, `awaitInitialized()`, `markFailed()`, non-function members, sync methods |
+| **Excludes** | `markInitialized()`, `awaitInitialized()`, `markFailed()`, non-function members, sync methods, `@SkipInit` methods |
 
 ### `@WaitForInit` & `@WaitForThrowingInit`
 | Feature | Details |
@@ -399,6 +440,14 @@ Tests/
 | **Type** | `@attached(body)` |
 | **Target** | Individual `async` (or `async throws`) function inside a conforming type |
 | **Effect** | Prepends `await awaitInitialized()` (or `try await...`) to the function body |
+
+### `@SkipInit`
+| Feature | Details |
+|:---|:---|
+| **Type** | `@attached(peer)` |
+| **Target** | Individual `async` function inside a type using `@AutoAwaitInit` or `@AutoAwaitThrowingInit` |
+| **Effect** | Prevents the enclosing member-attribute macro from stamping `@WaitForInit`/`@WaitForThrowingInit` on this method |
+| **Produces** | No peer declarations — acts purely as a compile-time marker |
 
 ---
 
@@ -421,6 +470,12 @@ Initializable provides rich compiler diagnostics with actionable fix-its. You'll
 |:---|:---|:---|
 | **No conformance** | `@AutoAwaitInit can only be applied to a type that conforms to 'Initializable'` | *None* |
 | **Duplicate attribute** | `@WaitForInit should not be added manually when @AutoAwaitInit is applied...` | Remove `@WaitForInit` |
+
+### `@SkipInit`
+| Scenario | Diagnostic Error Message | Xcode Fix-It Suggestion |
+|:---|:---|:---|
+| **Sync function** | `@SkipInit can only be applied to async functions, sync functions are never wrapped` | Remove `@SkipInit` |
+| **No enclosing `@AutoAwait*`** | `@SkipInit can only be used inside a type marked with @AutoAwaitInit or @AutoAwaitThrowingInit` | Remove `@SkipInit` |
 
 ---
 
