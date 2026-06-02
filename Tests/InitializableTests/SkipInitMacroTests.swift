@@ -2,6 +2,11 @@
 //  SkipInitMacroTests.swift
 //  InitializableTests
 //
+//  Unit tests for the ``SkipInitMacro`` peer macro. Verifies that `@SkipInit`
+//  correctly opts methods out of automatic `@WaitForInit` stamping by
+//  `@AutoAwaitInit`, and that appropriate diagnostics are emitted for
+//  invalid usage (non-async functions, missing enclosing `@AutoAwait*` macro).
+//
 //  Created by Arindam Karmakar on 02/06/26.
 //
 
@@ -11,9 +16,18 @@ import SwiftSyntaxMacrosTestSupport
 #if canImport(InitializableMacros)
 @testable import InitializableMacros
 
+/// Tests for the `@SkipInit` peer macro.
+///
+/// Validates the following behaviors:
+/// - Methods annotated with `@SkipInit` are excluded from `@AutoAwaitInit` stamping.
+/// - Applying `@SkipInit` to a synchronous function produces an error with a removal fix-it.
+/// - Applying `@SkipInit` without an enclosing `@AutoAwaitInit`/`@AutoAwaitThrowingInit` produces an error.
+/// - Applying `@SkipInit` outside any type declaration produces an error.
 @Suite("SkipInit Macro")
 struct SkipInitMacroTests {
     
+    /// Verifies that `@AutoAwaitInit` skips stamping `@WaitForInit` on a method
+    /// decorated with `@SkipInit`, while still stamping other async methods normally.
     @Test("Skips stamping on @SkipInit async method")
     func skipsStampingOnSkipInit() {
         assertMacroExpansion(
@@ -37,6 +51,8 @@ struct SkipInitMacroTests {
         )
     }
     
+    /// Verifies that `@SkipInit` on a synchronous function emits an error diagnostic
+    /// with a fix-it suggesting removal of the attribute.
     @Test("Errors when @SkipInit is used on a sync function")
     func errorsOnSyncFunction() {
         assertMacroExpansion(
@@ -65,6 +81,8 @@ struct SkipInitMacroTests {
         )
     }
     
+    /// Verifies that `@SkipInit` emits an error when the enclosing type does not
+    /// have `@AutoAwaitInit` or `@AutoAwaitThrowingInit` applied.
     @Test("Errors when @SkipInit is used without @AutoAwaitInit on enclosing type")
     func errorsWithoutAutoAwaitInit() {
         assertMacroExpansion(
@@ -92,6 +110,8 @@ struct SkipInitMacroTests {
         )
     }
     
+    /// Verifies that `@SkipInit` emits an error when applied to a free function
+    /// (outside any type declaration), since there is no `@AutoAwait*` context.
     @Test("Errors when @SkipInit is used without any enclosing type")
     func errorsOutsideType() {
         assertMacroExpansion(

@@ -199,11 +199,34 @@ enum AutoAwaitInitFixIt: FixItMessage {
     }
 }
 
+// MARK: - SkipInit Diagnostics
 
+/// Diagnostic messages emitted by ``SkipInitMacro``.
+///
+/// These diagnostics validate that `@SkipInit` is applied in a meaningful context —
+/// specifically, on an `async` function inside a type that uses `@AutoAwaitInit`
+/// or `@AutoAwaitThrowingInit`.
+///
+/// All cases produce `.error` severity diagnostics with an accompanying
+/// ``SkipInitFixIt/removeSkipInit`` fix-it.
+///
+/// - SeeAlso: ``SkipInitFixIt``, ``SkipInitMacro``
 enum SkipInitDiagnostic: DiagnosticMessage {
-    case notInsideAutoAwaitInit   // enclosing type lacks @AutoAwaitInit / @AutoAwaitThrowingInit
-    case notAsync                 // applied to a non-async function
+    /// The enclosing type does not have `@AutoAwaitInit` or `@AutoAwaitThrowingInit`.
+    ///
+    /// Emitted when `@SkipInit` is applied to a method inside a type (or at the top level)
+    /// that has no automatic stamping macro. Since there is no automatic `@WaitForInit`
+    /// to opt out of, the annotation is meaningless and should be removed.
+    case notInsideAutoAwaitInit
+
+    /// The function is not `async`.
+    ///
+    /// Emitted when `@SkipInit` is applied to a synchronous function. Synchronous methods
+    /// are never stamped by `@AutoAwaitInit` or `@AutoAwaitThrowingInit`, so `@SkipInit`
+    /// is redundant and likely a mistake.
+    case notAsync
     
+    /// The human-readable diagnostic message string.
     var message: String {
         switch self {
         case .notInsideAutoAwaitInit:
@@ -213,18 +236,31 @@ enum SkipInitDiagnostic: DiagnosticMessage {
         }
     }
     
+    /// A unique identifier for this diagnostic within the `InitializableMacros` domain.
     var diagnosticID: MessageID {
         MessageID(domain: "InitializableMacros", id: "\(self)")
     }
     
+    /// All `SkipInit` diagnostics are errors — the attribute is invalid and should be removed.
     var severity: DiagnosticSeverity { .error }
 }
 
+// MARK: - SkipInit Fix-Its
+
+/// Fix-it messages that suggest removing an invalid `@SkipInit` attribute.
+///
+/// Accompanies ``SkipInitDiagnostic`` errors to provide a one-click removal of
+/// the misplaced `@SkipInit` annotation in the IDE.
+///
+/// - SeeAlso: ``SkipInitDiagnostic``
 enum SkipInitFixIt: FixItMessage {
+    /// Suggests removing the `@SkipInit` attribute from the function declaration.
     case removeSkipInit
     
+    /// The human-readable fix-it description shown in the IDE.
     var message: String { "Remove '@SkipInit'" }
     
+    /// A unique identifier for this fix-it within the `InitializableMacros` domain.
     var fixItID: MessageID {
         MessageID(domain: "InitializableMacros", id: "\(self)")
     }

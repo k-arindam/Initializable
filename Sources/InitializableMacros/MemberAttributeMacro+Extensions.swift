@@ -82,6 +82,14 @@ internal extension MemberAttributeMacro {
         return true
     }
     
+    /// Checks whether the given function declaration has a `@SkipInit` attribute.
+    ///
+    /// Called by ``AutoAwaitInitMacro`` and ``AutoAwaitThrowingInitMacro`` before
+    /// stamping `@WaitForInit`/`@WaitForThrowingInit` on a member. If this returns `true`,
+    /// the member-attribute macro skips that function, honoring the developer's explicit opt-out.
+    ///
+    /// - Parameter funcDecl: The function declaration to inspect for a `@SkipInit` attribute.
+    /// - Returns: `true` if the function has a `@SkipInit` attribute, `false` otherwise.
     static func hasSkipInit(on funcDecl: FunctionDeclSyntax) -> Bool {
         funcDecl.attributes.contains {
             $0.as(AttributeSyntax.self)?.attributeName.trimmedDescription == "SkipInit"

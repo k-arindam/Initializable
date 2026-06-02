@@ -154,6 +154,45 @@ public macro WaitForThrowingInit() = #externalMacro(
     type: "WaitForThrowingInitMacro"
 )
 
+/// Opts an individual `async` method out of automatic initialization gating.
+///
+/// Apply this macro to a specific method inside a type that uses ``AutoAwaitInit()``
+/// or ``AutoAwaitThrowingInit()`` to prevent the enclosing member-attribute macro from
+/// stamping `@WaitForInit` or `@WaitForThrowingInit` on that method. The method will
+/// execute immediately without waiting for the initialization gate to open.
+///
+/// ## When to Use
+/// Use `@SkipInit` for methods that must be callable before initialization completes,
+/// such as the initialization routine itself, cancellation handlers, or introspection helpers.
+///
+/// ## Example
+/// ```swift
+/// @AutoAwaitInit
+/// actor MyService: Initializable {
+///     let gate = InitializationGate()
+///
+///     // ✅ Skipped — this IS the initialization method
+///     @SkipInit
+///     func setup() async {
+///         await loadResources()
+///         await markInitialized()
+///     }
+///
+///     // ✅ Gets @WaitForInit automatically
+///     func fetchData() async -> Data { ... }
+/// }
+/// ```
+///
+/// ## Diagnostics
+/// - **Not async**: Emits an error with a fix-it to remove `@SkipInit`, because
+///   synchronous methods are never stamped by `@AutoAwaitInit`/`@AutoAwaitThrowingInit`
+///   in the first place — the annotation is redundant.
+/// - **No enclosing `@AutoAwaitInit`/`@AutoAwaitThrowingInit`**: Emits an error with
+///   a fix-it to remove `@SkipInit`, since there is nothing to skip.
+///
+/// - Note: This macro produces no peer declarations. It acts purely as a marker
+///   that is checked by the ``AutoAwaitInit()`` and ``AutoAwaitThrowingInit()`` macros.
+/// - SeeAlso: ``AutoAwaitInit()``, ``AutoAwaitThrowingInit()``, ``WaitForInit()``
 @attached(peer)
 public macro SkipInit() = #externalMacro(
     module: "InitializableMacros",

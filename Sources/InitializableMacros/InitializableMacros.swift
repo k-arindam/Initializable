@@ -15,11 +15,12 @@ import SwiftCompilerPlugin
 
 /// The main compiler plugin that provides macro implementations to the Swift compiler.
 ///
-/// This plugin registers four macros:
+/// This plugin registers five macros:
 /// - ``AutoAwaitInitMacro``: Member-attribute macro for non-throwing initialization gating.
 /// - ``AutoAwaitThrowingInitMacro``: Member-attribute macro for throwing initialization gating.
 /// - ``WaitForInitMacro``: Body macro that injects `await awaitInitialized()`.
 /// - ``WaitForThrowingInitMacro``: Body macro that injects `try await awaitInitialized()`.
+/// - ``SkipInitMacro``: Peer macro that opts individual methods out of automatic stamping.
 ///
 /// - SeeAlso: The corresponding `#externalMacro` declarations in `Macros.swift`.
 @main
